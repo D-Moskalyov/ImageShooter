@@ -1,1 +1,3 @@
-include ':app'
+include ':app', ':sdk-library', ':oAuth'
+project(':sdk-library').projectDir = new File('app/libs/dribbble-android-sdk/sdk-library')
+project(':oAuth').projectDir = new File('app/libs/dribbble-android-sdk/oAuth')

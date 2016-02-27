@@ -4,6 +4,8 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ImageShooter.iml" filepath="$PROJECT_DIR$/ImageShooter.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/libs/dribbble-android-sdk/oAuth/oAuth.iml" filepath="$PROJECT_DIR$/app/libs/dribbble-android-sdk/oAuth/oAuth.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/libs/dribbble-android-sdk/sdk-library/sdk-library.iml" filepath="$PROJECT_DIR$/app/libs/dribbble-android-sdk/sdk-library/sdk-library.iml" />
     </modules>
   </component>
 </project>
