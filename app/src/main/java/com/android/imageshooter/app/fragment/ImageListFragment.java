@@ -15,11 +15,14 @@ import com.agilie.dribbblesdk.domain.Shot;
 import com.agilie.dribbblesdk.service.retrofit.DribbbleServiceGenerator;
 import com.android.imageshooter.app.R;
 import com.android.imageshooter.app.ShotInfos;
+import com.android.imageshooter.app.Utils.ShotPathString;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
 import com.nostra13.universalimageloader.core.display.CircleBitmapDisplayer;
 import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
+import com.nostra13.universalimageloader.core.display.SimpleBitmapDisplayer;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.nostra13.universalimageloader.core.listener.PauseOnScrollListener;
 import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
@@ -27,11 +30,14 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import javax.annotation.RegEx;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ImageListFragment extends Fragment {
 
@@ -93,7 +99,11 @@ public class ImageListFragment extends Fragment {
                 List<Shot> shots = response.body();
                 shotInfosList.clear();
                 for (Shot shot : shots) {
-                    shotInfosList.add(new ShotInfos(shot.getDescription(), shot.getTitle(), shot.getImages().getHidpi()));
+                    String path = ShotPathString.getShotPathString(shot);
+                    int dotIndx = path.lastIndexOf(".");
+                    String ext = path.substring(dotIndx, path.length());
+                    if(!ext.equals(".gif"))
+                        shotInfosList.add(new ShotInfos(shot.getDescription(), shot.getTitle(), shot.getImages().getHidpi()));
                 }
                 //intent.putExtra(Constants.Extra.FRAGMENT_INDEX, ImageListFragment.INDEX);
                 NUMBER_OF_PAGES++;
@@ -127,13 +137,14 @@ public class ImageListFragment extends Fragment {
                     .showImageForEmptyUri(R.drawable.ic_empty)
                     .showImageOnFail(R.drawable.ic_error)
                     .cacheInMemory(true)
+                    .imageScaleType(ImageScaleType.EXACTLY)
+                    .bitmapConfig(Bitmap.Config.RGB_565)
                     .cacheOnDisk(true)
                     .considerExifParams(true)
-                    .displayer(new CircleBitmapDisplayer(Color.WHITE, 5))
+                    .displayer(new SimpleBitmapDisplayer())
                     .build();
 
             ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(fragment.getActivity()));
-            //this.context = context;
         }
 
         @Override
