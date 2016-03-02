@@ -1,46 +1,32 @@
 package com.android.imageshooter.app.activity;
 
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Color;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.*;
-import com.agilie.dribbblesdk.domain.Shot;
-import com.agilie.dribbblesdk.service.auth.AuthCredentials;
-import com.agilie.dribbblesdk.service.auth.DribbbleAuthHelper;
-import com.agilie.dribbblesdk.service.auth.DribbbleConstants;
-import com.agilie.dribbblesdk.service.retrofit.DribbbleServiceGenerator;
-import com.android.imageshooter.app.R;
 import com.android.imageshooter.app.ShotInfos;
+import com.android.imageshooter.app.Utils.FeedReaderContract;
+import com.android.imageshooter.app.Utils.FeedReaderDBHelper;
 import com.android.imageshooter.app.fragment.ImageListFragment;
-import com.google.api.client.auth.oauth2.Credential;
-import com.nostra13.universalimageloader.core.DisplayImageOptions;
-import com.nostra13.universalimageloader.core.ImageLoader;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
-import com.nostra13.universalimageloader.core.display.CircleBitmapDisplayer;
-import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
-import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
-import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 
 public class MainActivity extends FragmentActivity {
+
+    SQLiteDatabase db;
+    FeedReaderDBHelper mDbHelper;
+
+    String tag;
+
+    String[] projection = {
+            FeedReaderContract.FeedShot._ID,
+            FeedReaderContract.FeedShot.COLUMN_NAME_TITLE,
+            FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION,
+            FeedReaderContract.FeedShot.COLUMN_NAME_PATH
+    };
 
     //private static final String DRIBBBLE_CLIENT_ID = "1cb175a8b3171b2084b2d03f036928bf8fb09f09a2b4fdff109744fc774ea112";
     //private static final String DRIBBBLE_CLIENT_SECRET = "9667b3a0904bdff92648ee8341d3ce8c93ec4b857751b00063519886e9db4490";
@@ -61,7 +47,7 @@ public class MainActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-//        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
+        //        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
 //        .cacheInMemory(true)
 //        .cacheOnDisk(true)
 //        .build();
@@ -83,9 +69,9 @@ public class MainActivity extends FragmentActivity {
 //                i = 5;
 //            }
 //        });
+        mDbHelper = new FeedReaderDBHelper(this);
 
         Fragment fr;
-        String tag;
 
         tag = ImageListFragment.class.getSimpleName();
         fr = getSupportFragmentManager().findFragmentByTag(tag);
@@ -95,8 +81,40 @@ public class MainActivity extends FragmentActivity {
         getSupportFragmentManager().beginTransaction().replace(android.R.id.content, fr, tag).commit();
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
 
-//    @Override
+        ImageListFragment fr = (ImageListFragment)getSupportFragmentManager().findFragmentByTag(tag);
+        List<ShotInfos> shotInfosList = fr.getShotInfosList();
+        db = mDbHelper.getWritableDatabase();
+
+        if(shotInfosList != null && shotInfosList.size() > 0){
+            db.beginTransaction();
+
+            try {
+                db.delete(FeedReaderContract.FeedShot.TABLE_NAME, null, null);
+                ContentValues values = new ContentValues();
+
+                for(ShotInfos shotInfos : shotInfosList){
+                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE, shotInfos.getTitle());
+                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION, shotInfos.getDescription());
+                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_PATH, shotInfos.getURL());
+
+                    db.insert(FeedReaderContract.FeedShot.TABLE_NAME, "null", values);
+                }
+
+                db.setTransactionSuccessful();
+            }
+            finally {
+                db.endTransaction();
+                mDbHelper.close();
+            }
+
+        }
+    }
+
+    //    @Override
 //    public boolean onCreateOptionsMenu(Menu menu) {
 //        // Inflate the menu; this adds items to the action bar if it is present.
 //        getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -115,5 +133,15 @@ public class MainActivity extends FragmentActivity {
 //    }
 
 
+    public SQLiteDatabase getDb() {
+        return db;
+    }
 
+    public FeedReaderDBHelper getmDbHelper() {
+        return mDbHelper;
+    }
+
+    public String[] getProjection() {
+        return projection;
+    }
 }

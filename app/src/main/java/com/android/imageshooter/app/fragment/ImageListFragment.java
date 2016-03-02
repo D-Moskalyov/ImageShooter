@@ -1,8 +1,12 @@
 package com.android.imageshooter.app.fragment;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -15,12 +19,14 @@ import com.agilie.dribbblesdk.domain.Shot;
 import com.agilie.dribbblesdk.service.retrofit.DribbbleServiceGenerator;
 import com.android.imageshooter.app.R;
 import com.android.imageshooter.app.ShotInfos;
+import com.android.imageshooter.app.Utils.FeedReaderContract;
+import com.android.imageshooter.app.Utils.FeedReaderDBHelper;
 import com.android.imageshooter.app.Utils.ShotPathString;
+import com.android.imageshooter.app.activity.MainActivity;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.ImageScaleType;
-import com.nostra13.universalimageloader.core.display.CircleBitmapDisplayer;
 import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
 import com.nostra13.universalimageloader.core.display.SimpleBitmapDisplayer;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
@@ -73,8 +79,22 @@ public class ImageListFragment extends Fragment {
             }
         });
 
+        swipeContainer.post(new Runnable() {
+            @Override
+            public void run() {
+                swipeContainer.setRefreshing(true);
+                getNextImages();
+            }
+        });
+
         return rootView;
         //return super.onCreateView(inflater, container, savedInstanceState);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        //swipeContainer.setRefreshing(true);
     }
 
     @Override
@@ -90,34 +110,47 @@ public class ImageListFragment extends Fragment {
     }
 
     void getNextImages(){
-        Call<List<Shot>> shotsCall = DribbbleServiceGenerator
-                .getDribbbleShotService(DRIBBBLE_CLIENT_ACCESS_TOKEN)
-                .fetchShots(NUMBER_OF_PAGES, SHOTS_PER_PAGE);
-        shotsCall.enqueue(new Callback<List<Shot>>() {
-            @Override
-            public void onResponse(Response<List<Shot>> response) {
-                List<Shot> shots = response.body();
-                shotInfosList.clear();
-                for (Shot shot : shots) {
-                    String path = ShotPathString.getShotPathString(shot);
-                    int dotIndx = path.lastIndexOf(".");
-                    String ext = path.substring(dotIndx, path.length());
-                    if(!ext.equals(".gif"))
-                        shotInfosList.add(new ShotInfos(shot.getDescription(), shot.getTitle(), shot.getImages().getHidpi()));
+        if(isOnline()) {
+            Call<List<Shot>> shotsCall = DribbbleServiceGenerator
+                    .getDribbbleShotService(DRIBBBLE_CLIENT_ACCESS_TOKEN)
+                    .fetchShots(NUMBER_OF_PAGES, SHOTS_PER_PAGE);
+            shotsCall.enqueue(new Callback<List<Shot>>() {
+                @Override
+                public void onResponse(Response<List<Shot>> response) {
+                    List<Shot> shots = response.body();
+                    shotInfosList.clear();
+                    for (Shot shot : shots) {
+                        String path = ShotPathString.getShotPathString(shot);
+                        int dotIndx = path.lastIndexOf(".");
+                        String ext = path.substring(dotIndx, path.length());
+                        if (!ext.equals(".gif"))
+                            shotInfosList.add(new ShotInfos(shot.getDescription(), shot.getTitle(), path));
+                    }
+                    //intent.putExtra(Constants.Extra.FRAGMENT_INDEX, ImageListFragment.INDEX);
+                    NUMBER_OF_PAGES++;
+                    ((ListView) listView).setAdapter(new ImageAdapter(getActivity(), imageListFragment));
+                    swipeContainer.setRefreshing(false);
                 }
-                //intent.putExtra(Constants.Extra.FRAGMENT_INDEX, ImageListFragment.INDEX);
-                NUMBER_OF_PAGES++;
-                ((ListView) listView).setAdapter(new ImageAdapter(getActivity(), imageListFragment));
-                swipeContainer.setRefreshing(false);
+
+                @Override
+                public void onFailure(Throwable t) {
+                    swipeContainer.setRefreshing(false);
+                }
+            });
+        }
+        else {
+            Toast.makeText(getActivity(), "ShotsFromCache", Toast.LENGTH_SHORT);
+            if(shotInfosList == null || shotInfosList.size() == 0) {
+                getShotsInfoFromDB();
+                if(swipeContainer != null & swipeContainer.isRefreshing())
+                    swipeContainer.setRefreshing(false);
             }
+        }
 
-            @Override
-            public void onFailure(Throwable t) {
-                swipeContainer.setRefreshing(false);
-            }
-        });
+    }
 
-
+    public ArrayList<ShotInfos> getShotInfosList() {
+        return shotInfosList;
     }
 
     private static class ImageAdapter extends BaseAdapter {
@@ -212,5 +245,39 @@ public class ImageListFragment extends Fragment {
 
     private void applyScrollListener() {
         listView.setOnScrollListener(new PauseOnScrollListener(ImageLoader.getInstance(), pauseOnScroll, pauseOnFling));
+    }
+
+    private void getShotsInfoFromDB(){
+        SQLiteDatabase db;
+        FeedReaderDBHelper mDbHelper = ((MainActivity)getActivity()).getmDbHelper();
+
+        db = mDbHelper.getReadableDatabase();
+
+        Cursor c = db.query(FeedReaderContract.FeedShot.TABLE_NAME, ((MainActivity)getActivity()).getProjection(), null, null, null, null, null);
+        //ArrayList<ShotInfos> shotInfosList = new ArrayList<ShotInfos>();
+        if(c != null){
+            c.moveToFirst();
+            shotInfosList.add(new ShotInfos(
+                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION)),
+                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE)),
+                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_PATH))));
+            while (c.moveToNext()){
+                shotInfosList.add(new ShotInfos(
+                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION)),
+                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE)),
+                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_PATH))));
+            }
+        }
+
+        mDbHelper.close();
+
+        if(swipeContainer != null & swipeContainer.isRefreshing())
+            swipeContainer.setRefreshing(false);
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager)getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 }
