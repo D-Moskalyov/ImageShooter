@@ -1,4 +1,4 @@
-package com.android.imageshooter.app;
+package com.android.imageshooter.app.Utils;
 
 
 public class ShotInfos {

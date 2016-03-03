@@ -4,7 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -18,11 +17,12 @@ import android.widget.*;
 import com.agilie.dribbblesdk.domain.Shot;
 import com.agilie.dribbblesdk.service.retrofit.DribbbleServiceGenerator;
 import com.android.imageshooter.app.R;
-import com.android.imageshooter.app.ShotInfos;
+import com.android.imageshooter.app.Utils.ShotInfos;
 import com.android.imageshooter.app.Utils.FeedReaderContract;
 import com.android.imageshooter.app.Utils.FeedReaderDBHelper;
 import com.android.imageshooter.app.Utils.ShotPathString;
 import com.android.imageshooter.app.activity.MainActivity;
+import com.android.imageshooter.app.async.ReadDBAsync;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
@@ -36,14 +36,10 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import javax.annotation.RegEx;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ImageListFragment extends Fragment {
 
@@ -142,9 +138,8 @@ public class ImageListFragment extends Fragment {
             Toast.makeText(getActivity(), "ShotsFromCache", Toast.LENGTH_SHORT);
             if(shotInfosList == null || shotInfosList.size() == 0) {
                 getShotsInfoFromDB();
-                if(swipeContainer != null & swipeContainer.isRefreshing())
-                    swipeContainer.setRefreshing(false);
-            }
+            }else if(swipeContainer != null & swipeContainer.isRefreshing())
+                swipeContainer.setRefreshing(false);
         }
 
     }
@@ -248,28 +243,15 @@ public class ImageListFragment extends Fragment {
     }
 
     private void getShotsInfoFromDB(){
-        SQLiteDatabase db;
-        FeedReaderDBHelper mDbHelper = ((MainActivity)getActivity()).getmDbHelper();
+        ReadDBAsync readDBAsync = new ReadDBAsync();
+        readDBAsync.link((MainActivity)getActivity());
+        readDBAsync.execute();
 
-        db = mDbHelper.getReadableDatabase();
-
-        Cursor c = db.query(FeedReaderContract.FeedShot.TABLE_NAME, ((MainActivity)getActivity()).getProjection(), null, null, null, null, null);
-        //ArrayList<ShotInfos> shotInfosList = new ArrayList<ShotInfos>();
-        if(c != null){
-            c.moveToFirst();
-            shotInfosList.add(new ShotInfos(
-                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION)),
-                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE)),
-                    c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_PATH))));
-            while (c.moveToNext()){
-                shotInfosList.add(new ShotInfos(
-                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION)),
-                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE)),
-                        c.getString(c.getColumnIndex(FeedReaderContract.FeedShot.COLUMN_NAME_PATH))));
-            }
+        try {
+            readDBAsync.wait();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-
-        mDbHelper.close();
 
         if(swipeContainer != null & swipeContainer.isRefreshing())
             swipeContainer.setRefreshing(false);

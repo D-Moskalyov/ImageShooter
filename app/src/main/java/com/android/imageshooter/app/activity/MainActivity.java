@@ -1,15 +1,19 @@
 package com.android.imageshooter.app.activity;
 
 import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import com.android.imageshooter.app.ShotInfos;
+import android.util.Log;
+import com.android.imageshooter.app.Utils.RetainObject;
+import com.android.imageshooter.app.Utils.ShotInfos;
 import com.android.imageshooter.app.Utils.FeedReaderContract;
 import com.android.imageshooter.app.Utils.FeedReaderDBHelper;
+import com.android.imageshooter.app.async.ReadDBAsync;
+import com.android.imageshooter.app.async.WriteDBAsync;
 import com.android.imageshooter.app.fragment.ImageListFragment;
+import okhttp3.internal.http.RetryableSink;
 
 import java.util.*;
 
@@ -18,6 +22,8 @@ public class MainActivity extends FragmentActivity {
 
     SQLiteDatabase db;
     FeedReaderDBHelper mDbHelper;
+    ReadDBAsync readDBAsync;
+    WriteDBAsync writeDBAsync;
 
     String tag;
 
@@ -47,6 +53,17 @@ public class MainActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        RetainObject retainObj = (RetainObject) getLastCustomNonConfigurationInstance();
+        if(retainObj != null) {
+            readDBAsync = retainObj.getReadDBAsync();
+            writeDBAsync = retainObj.getWriteDBAsync();
+            db = retainObj.getDb();
+            mDbHelper = retainObj.getDbHelper();
+        }
+        else {
+            mDbHelper = new FeedReaderDBHelper(this);
+        }
+
         //        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
 //        .cacheInMemory(true)
 //        .cacheOnDisk(true)
@@ -69,7 +86,7 @@ public class MainActivity extends FragmentActivity {
 //                i = 5;
 //            }
 //        });
-        mDbHelper = new FeedReaderDBHelper(this);
+
 
         Fragment fr;
 
@@ -85,34 +102,29 @@ public class MainActivity extends FragmentActivity {
     protected void onPause() {
         super.onPause();
 
-        ImageListFragment fr = (ImageListFragment)getSupportFragmentManager().findFragmentByTag(tag);
-        List<ShotInfos> shotInfosList = fr.getShotInfosList();
-        db = mDbHelper.getWritableDatabase();
+        WriteDBAsync writeDBAsync = new WriteDBAsync();
+        writeDBAsync.link(this);
+        writeDBAsync.execute();
 
-        if(shotInfosList != null && shotInfosList.size() > 0){
-            db.beginTransaction();
+//        try {
+//            writeDBAsync.wait();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 
-            try {
-                db.delete(FeedReaderContract.FeedShot.TABLE_NAME, null, null);
-                ContentValues values = new ContentValues();
-
-                for(ShotInfos shotInfos : shotInfosList){
-                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_TITLE, shotInfos.getTitle());
-                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_DESCRIPTION, shotInfos.getDescription());
-                    values.put(FeedReaderContract.FeedShot.COLUMN_NAME_PATH, shotInfos.getURL());
-
-                    db.insert(FeedReaderContract.FeedShot.TABLE_NAME, "null", values);
-                }
-
-                db.setTransactionSuccessful();
-            }
-            finally {
-                db.endTransaction();
-                mDbHelper.close();
-            }
-
-        }
     }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        if(readDBAsync != null)
+            readDBAsync.unLink();
+        if(writeDBAsync != null)
+            writeDBAsync.unLink();
+
+        RetainObject retainObj = new RetainObject(db, mDbHelper, readDBAsync, writeDBAsync);
+        return retainObj;
+    }
+
 
     //    @Override
 //    public boolean onCreateOptionsMenu(Menu menu) {
@@ -143,5 +155,9 @@ public class MainActivity extends FragmentActivity {
 
     public String[] getProjection() {
         return projection;
+    }
+
+    public String getTag() {
+        return tag;
     }
 }
