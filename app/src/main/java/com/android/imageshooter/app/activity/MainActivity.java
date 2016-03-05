@@ -6,6 +6,10 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+import com.android.imageshooter.app.R;
 import com.android.imageshooter.app.Utils.RetainObject;
 import com.android.imageshooter.app.Utils.ShotInfos;
 import com.android.imageshooter.app.Utils.FeedReaderContract;
@@ -16,6 +20,7 @@ import com.android.imageshooter.app.fragment.ImageListFragment;
 import okhttp3.internal.http.RetryableSink;
 
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 
 public class MainActivity extends FragmentActivity {
@@ -24,6 +29,7 @@ public class MainActivity extends FragmentActivity {
     FeedReaderDBHelper mDbHelper;
     ReadDBAsync readDBAsync;
     WriteDBAsync writeDBAsync;
+    int currentPos;
 
     String tag;
 
@@ -59,9 +65,11 @@ public class MainActivity extends FragmentActivity {
             writeDBAsync = retainObj.getWriteDBAsync();
             db = retainObj.getDb();
             mDbHelper = retainObj.getDbHelper();
+            currentPos = retainObj.getCurrentPos();
         }
         else {
             mDbHelper = new FeedReaderDBHelper(this);
+            currentPos = 0;
         }
 
         //        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
@@ -102,16 +110,20 @@ public class MainActivity extends FragmentActivity {
     protected void onPause() {
         super.onPause();
 
+        currentPos = ((ImageListFragment)getSupportFragmentManager().findFragmentByTag(tag)).getListView().getFirstVisiblePosition();
+
         WriteDBAsync writeDBAsync = new WriteDBAsync();
         writeDBAsync.link(this);
         writeDBAsync.execute();
 
-//        try {
-//            writeDBAsync.wait();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-
+        synchronized(mDbHelper) {
+            try {
+                Log.i("wait-notify", "wait from Main write");
+                mDbHelper.wait(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -121,10 +133,22 @@ public class MainActivity extends FragmentActivity {
         if(writeDBAsync != null)
             writeDBAsync.unLink();
 
-        RetainObject retainObj = new RetainObject(db, mDbHelper, readDBAsync, writeDBAsync);
+        RetainObject retainObj = new RetainObject(db, mDbHelper, readDBAsync, writeDBAsync, currentPos);
         return retainObj;
     }
 
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+//        ImageListFragment fr = ((ImageListFragment)getSupportFragmentManager().findFragmentByTag(tag));
+//        View v = fr.getView().findViewById(android.R.id.list);
+//        TextView tVD = (TextView) v.findViewById(R.id.textDesc);
+//        TextView tVT = (TextView) v.findViewById(R.id.textTitle);
+//        ImageView iV = (ImageView) v.findViewById(R.id.image);
+//        int w = iV.getWidth();
+//        tVD.setWidth(w);
+//        tVT.setWidth(w);
+    }
 
     //    @Override
 //    public boolean onCreateOptionsMenu(Menu menu) {
@@ -159,5 +183,13 @@ public class MainActivity extends FragmentActivity {
 
     public String getTag() {
         return tag;
+    }
+
+    public int getCurrentPos() {
+        return currentPos;
+    }
+
+    public void setCurrentPos(int currentPos) {
+        this.currentPos = currentPos;
     }
 }

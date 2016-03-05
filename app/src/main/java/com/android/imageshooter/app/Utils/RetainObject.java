@@ -10,12 +10,14 @@ public class RetainObject {
     WriteDBAsync writeDBAsync;
     FeedReaderDBHelper dbHelper;
     SQLiteDatabase db;
+    int currentPos;
 
-    public RetainObject(SQLiteDatabase db, FeedReaderDBHelper dbHelper, ReadDBAsync readDBAsync, WriteDBAsync writeDBAsync) {
+    public RetainObject(SQLiteDatabase db, FeedReaderDBHelper dbHelper, ReadDBAsync readDBAsync, WriteDBAsync writeDBAsync, int currentPos) {
         this.db = db;
         this.dbHelper = dbHelper;
         this.readDBAsync = readDBAsync;
         this.writeDBAsync = writeDBAsync;
+        this.currentPos = currentPos;
     }
 
     public SQLiteDatabase getDb() {
@@ -48,5 +50,13 @@ public class RetainObject {
 
     public void setWriteDBAsync(WriteDBAsync writeDBAsync) {
         this.writeDBAsync = writeDBAsync;
+    }
+
+    public int getCurrentPos() {
+        return currentPos;
+    }
+
+    public void setCurrentPos(int currentPos) {
+        this.currentPos = currentPos;
     }
 }

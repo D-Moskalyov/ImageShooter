@@ -1,5 +1,6 @@
 package com.android.imageshooter.app.fragment;
 
+import android.app.ActionBar;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,6 +11,8 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,6 +53,7 @@ public class ImageListFragment extends Fragment {
     private SwipeRefreshLayout swipeContainer;
     protected AbsListView listView;
     protected ArrayList<ShotInfos> shotInfosList;
+    FeedReaderDBHelper mDbHelper;
 
     protected boolean pauseOnScroll = false;
     protected boolean pauseOnFling = true;
@@ -59,6 +63,8 @@ public class ImageListFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        mDbHelper = ((MainActivity)getActivity()).getmDbHelper();
+
         View rootView = inflater.inflate(R.layout.fg_image_list, container, false);
         imageListFragment = this;
         shotInfosList = new ArrayList<ShotInfos>();
@@ -79,7 +85,11 @@ public class ImageListFragment extends Fragment {
             @Override
             public void run() {
                 swipeContainer.setRefreshing(true);
-                getNextImages();
+                if(NUMBER_OF_PAGES == 1)
+                    getNextImages();
+                else {
+                    getShotsInfoFromDB();
+                }
             }
         });
 
@@ -105,6 +115,8 @@ public class ImageListFragment extends Fragment {
         AnimateFirstDisplayListener.displayedImages.clear();
     }
 
+
+
     void getNextImages(){
         if(isOnline()) {
             Call<List<Shot>> shotsCall = DribbbleServiceGenerator
@@ -124,8 +136,11 @@ public class ImageListFragment extends Fragment {
                     }
                     //intent.putExtra(Constants.Extra.FRAGMENT_INDEX, ImageListFragment.INDEX);
                     NUMBER_OF_PAGES++;
-                    ((ListView) listView).setAdapter(new ImageAdapter(getActivity(), imageListFragment));
-                    swipeContainer.setRefreshing(false);
+                    if(getActivity() != null) {
+                        ((ListView) listView).setAdapter(new ImageAdapter(getActivity(), imageListFragment));
+                        swipeContainer.setRefreshing(false);
+                        //listView.setSelection(((MainActivity) getActivity()).getCurrentPos());
+                    }
                 }
 
                 @Override
@@ -200,6 +215,45 @@ public class ImageListFragment extends Fragment {
                 holder.textDesc = (TextView) view.findViewById(R.id.textDesc);
                 holder.textTitle = (TextView) view.findViewById(R.id.textTitle);
                 holder.image = (ImageView) view.findViewById(R.id.image);
+
+//                holder.image.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        int w = holder.image.getWidth();
+//                        int hT = holder.textTitle.getHeight();
+//                        int hD = holder.textDesc.getHeight();
+//
+//                        RelativeLayout.LayoutParams paramsT = new RelativeLayout.LayoutParams(w, hT);
+//                        paramsT.addRule(10);
+//                        RelativeLayout.LayoutParams paramsD = new RelativeLayout.LayoutParams(w, hD);
+//                        paramsT.addRule(12);
+//
+//                        holder.textTitle.setLayoutParams(paramsT);
+//                        holder.textDesc.setLayoutParams(paramsD);
+//                    }
+//                });
+
+
+//                holder.image.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        final int imWidth = holder.image.getWidth();
+//                        holder.textTitle.post(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                holder.textTitle.setMaxWidth(imWidth);
+//                                holder.textDesc.post(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        holder.textDesc.setMaxWidth(imWidth);
+//                                    }
+//                                });
+//                            }
+//                        });
+//
+//                    }
+//                });
+
                 view.setTag(holder);
             } else {
                 holder = (ViewHolder) view.getTag();
@@ -210,8 +264,17 @@ public class ImageListFragment extends Fragment {
 
             ImageLoader.getInstance().displayImage(fragment.shotInfosList.get(position).getURL(), holder.image, options, animateFirstListener);
 
+//            RelativeLayout.LayoutParams layoutParamsT = new RelativeLayout.LayoutParams(holder.image.getLayoutParams().width,
+//                    holder.textTitle.getLayoutParams().height);
+//            RelativeLayout.LayoutParams layoutParamsD = new RelativeLayout.LayoutParams(holder.image.getLayoutParams().width,
+//                    holder.textDesc.getLayoutParams().height);
+//            holder.textTitle.setLayoutParams(layoutParamsT);
+//            holder.textDesc.setLayoutParams(layoutParamsD);
+
             return view;
         }
+
+
     }
 
     static class ViewHolder {
@@ -246,20 +309,32 @@ public class ImageListFragment extends Fragment {
         ReadDBAsync readDBAsync = new ReadDBAsync();
         readDBAsync.link((MainActivity)getActivity());
         readDBAsync.execute();
-
-        try {
-            readDBAsync.wait();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        synchronized(mDbHelper) {
+            try {
+                Log.i("wait-notify", "wait from Frag read");
+                mDbHelper.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
-        if(swipeContainer != null & swipeContainer.isRefreshing())
+        if(swipeContainer != null & swipeContainer.isRefreshing()) {
             swipeContainer.setRefreshing(false);
+            listView.setSelection(((MainActivity) getActivity()).getCurrentPos());
+        }
     }
 
     private boolean isOnline() {
         ConnectivityManager cm = (ConnectivityManager)getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo netInfo = cm.getActiveNetworkInfo();
         return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
+
+    public AbsListView getListView() {
+        return listView;
+    }
+
+    public void setListView(AbsListView listView) {
+        this.listView = listView;
     }
 }
