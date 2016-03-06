@@ -1,9 +1,6 @@
 package com.android.imageshooter.app.fragment;
 
-import android.app.ActionBar;
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -11,17 +8,15 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.util.AttributeSet;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.widget.*;
 import com.agilie.dribbblesdk.domain.Shot;
 import com.agilie.dribbblesdk.service.retrofit.DribbbleServiceGenerator;
 import com.android.imageshooter.app.R;
 import com.android.imageshooter.app.Utils.ShotInfos;
-import com.android.imageshooter.app.Utils.FeedReaderContract;
 import com.android.imageshooter.app.Utils.FeedReaderDBHelper;
 import com.android.imageshooter.app.Utils.ShotPathString;
 import com.android.imageshooter.app.activity.MainActivity;
@@ -39,16 +34,14 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class ImageListFragment extends Fragment {
 
     private static final String DRIBBBLE_CLIENT_ACCESS_TOKEN = "28499cacc1e937ae8a611ee402c4900fe97ce0b5bc536c53df67e20ca78126d6";
     private static int NUMBER_OF_PAGES = 1;
     private static final int SHOTS_PER_PAGE = 50;
+    private static String SORT_SHOTS = Shot.SORT_RECENT;
 
     private SwipeRefreshLayout swipeContainer;
     protected AbsListView listView;
@@ -59,6 +52,8 @@ public class ImageListFragment extends Fragment {
     protected boolean pauseOnFling = true;
 
     ImageListFragment imageListFragment;
+
+    HashMap<String, Object> queryMap;
 
     @Nullable
     @Override
@@ -85,7 +80,7 @@ public class ImageListFragment extends Fragment {
             @Override
             public void run() {
                 swipeContainer.setRefreshing(true);
-                if(NUMBER_OF_PAGES == 1)
+                if (NUMBER_OF_PAGES == 1)
                     getNextImages();
                 else {
                     getShotsInfoFromDB();
@@ -93,14 +88,14 @@ public class ImageListFragment extends Fragment {
             }
         });
 
+        queryMap = new HashMap<String, Object>();
+
         return rootView;
-        //return super.onCreateView(inflater, container, savedInstanceState);
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        //swipeContainer.setRefreshing(true);
     }
 
     @Override
@@ -115,13 +110,17 @@ public class ImageListFragment extends Fragment {
         AnimateFirstDisplayListener.displayedImages.clear();
     }
 
-
-
-    void getNextImages(){
+    public void getNextImages(){
         if(isOnline()) {
+            queryMap.put("page", NUMBER_OF_PAGES);
+            queryMap.put("per_page", SHOTS_PER_PAGE);
+            if(!SORT_SHOTS.equals(""))
+                queryMap.put("sort", SORT_SHOTS);
+            else
+                queryMap.remove("sort");
             Call<List<Shot>> shotsCall = DribbbleServiceGenerator
                     .getDribbbleShotService(DRIBBBLE_CLIENT_ACCESS_TOKEN)
-                    .fetchShots(NUMBER_OF_PAGES, SHOTS_PER_PAGE);
+                    .fetchShots(queryMap);
             shotsCall.enqueue(new Callback<List<Shot>>() {
                 @Override
                 public void onResponse(Response<List<Shot>> response) {
@@ -134,12 +133,10 @@ public class ImageListFragment extends Fragment {
                         if (!ext.equals(".gif"))
                             shotInfosList.add(new ShotInfos(shot.getDescription(), shot.getTitle(), path));
                     }
-                    //intent.putExtra(Constants.Extra.FRAGMENT_INDEX, ImageListFragment.INDEX);
                     NUMBER_OF_PAGES++;
                     if(getActivity() != null) {
                         ((ListView) listView).setAdapter(new ImageAdapter(getActivity(), imageListFragment));
                         swipeContainer.setRefreshing(false);
-                        //listView.setSelection(((MainActivity) getActivity()).getCurrentPos());
                     }
                 }
 
@@ -166,10 +163,8 @@ public class ImageListFragment extends Fragment {
     private static class ImageAdapter extends BaseAdapter {
 
         private DisplayImageOptions options;
-        //private static final String[] IMAGE_URLS = new String[50];
         private ImageLoadingListener animateFirstListener = new AnimateFirstDisplayListener();
         private LayoutInflater inflater;
-        //Context context;
         ImageListFragment fragment;
 
         public ImageAdapter(Context context, ImageListFragment fragment) {
@@ -215,61 +210,20 @@ public class ImageListFragment extends Fragment {
                 holder.textDesc = (TextView) view.findViewById(R.id.textDesc);
                 holder.textTitle = (TextView) view.findViewById(R.id.textTitle);
                 holder.image = (ImageView) view.findViewById(R.id.image);
-
-//                holder.image.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        int w = holder.image.getWidth();
-//                        int hT = holder.textTitle.getHeight();
-//                        int hD = holder.textDesc.getHeight();
-//
-//                        RelativeLayout.LayoutParams paramsT = new RelativeLayout.LayoutParams(w, hT);
-//                        paramsT.addRule(10);
-//                        RelativeLayout.LayoutParams paramsD = new RelativeLayout.LayoutParams(w, hD);
-//                        paramsT.addRule(12);
-//
-//                        holder.textTitle.setLayoutParams(paramsT);
-//                        holder.textDesc.setLayoutParams(paramsD);
-//                    }
-//                });
-
-
-//                holder.image.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        final int imWidth = holder.image.getWidth();
-//                        holder.textTitle.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                holder.textTitle.setMaxWidth(imWidth);
-//                                holder.textDesc.post(new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        holder.textDesc.setMaxWidth(imWidth);
-//                                    }
-//                                });
-//                            }
-//                        });
-//
-//                    }
-//                });
-
                 view.setTag(holder);
             } else {
                 holder = (ViewHolder) view.getTag();
             }
 
-            holder.textDesc.setText(fragment.shotInfosList.get(position).getDescription());
+            if (fragment.shotInfosList.get(position).getDescription() != null) {
+                holder.textDesc.setText(Html.fromHtml(fragment.shotInfosList.get(position).getDescription()));
+                holder.textDesc.setMovementMethod(LinkMovementMethod.getInstance());
+            }
+            else
+                holder.textDesc.setVisibility(View.INVISIBLE);
             holder.textTitle.setText(fragment.shotInfosList.get(position).getTitle());
 
             ImageLoader.getInstance().displayImage(fragment.shotInfosList.get(position).getURL(), holder.image, options, animateFirstListener);
-
-//            RelativeLayout.LayoutParams layoutParamsT = new RelativeLayout.LayoutParams(holder.image.getLayoutParams().width,
-//                    holder.textTitle.getLayoutParams().height);
-//            RelativeLayout.LayoutParams layoutParamsD = new RelativeLayout.LayoutParams(holder.image.getLayoutParams().width,
-//                    holder.textDesc.getLayoutParams().height);
-//            holder.textTitle.setLayoutParams(layoutParamsT);
-//            holder.textDesc.setLayoutParams(layoutParamsD);
 
             return view;
         }
@@ -290,12 +244,37 @@ public class ImageListFragment extends Fragment {
         @Override
         public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
             if (loadedImage != null) {
-                ImageView imageView = (ImageView) view;
+                final ImageView imageView = (ImageView) view;
                 boolean firstDisplay = !displayedImages.contains(imageUri);
                 if (firstDisplay) {
                     FadeInBitmapDisplayer.animate(imageView, 500);
                     displayedImages.add(imageUri);
                 }
+                imageView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ViewParent viewParent = imageView.getParent();
+                        if (viewParent instanceof RelativeLayout) {
+                            RelativeLayout r = (RelativeLayout) viewParent;
+                            TextView textTitle = (TextView) r.findViewById(R.id.textTitle);
+                            TextView textDesc = (TextView) r.findViewById(R.id.textDesc);
+
+                            int w = imageView.getWidth();
+                            int hT = textTitle.getHeight();
+                            int hD = textDesc.getHeight();
+
+                            RelativeLayout.LayoutParams paramsT = new RelativeLayout.LayoutParams(w, hT);
+                            paramsT.addRule(10);
+                            paramsT.addRule(14);
+                            RelativeLayout.LayoutParams paramsD = new RelativeLayout.LayoutParams(w, hD);
+                            paramsD.addRule(12);
+                            paramsD.addRule(14);
+
+                            textTitle.setLayoutParams(paramsT);
+                            textDesc.setLayoutParams(paramsD);
+                        }
+                    }
+                });
             }
         }
 
@@ -336,5 +315,21 @@ public class ImageListFragment extends Fragment {
 
     public void setListView(AbsListView listView) {
         this.listView = listView;
+    }
+
+    public static String getSortShots() {
+        return SORT_SHOTS;
+    }
+
+    public static void setSortShots(String sortShots) {
+        SORT_SHOTS = sortShots;
+    }
+
+    public static int getNumberOfPages() {
+        return NUMBER_OF_PAGES;
+    }
+
+    public static void setNumberOfPages(int numberOfPages) {
+        NUMBER_OF_PAGES = numberOfPages;
     }
 }

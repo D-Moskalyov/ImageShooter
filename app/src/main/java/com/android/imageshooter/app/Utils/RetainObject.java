@@ -11,13 +11,15 @@ public class RetainObject {
     FeedReaderDBHelper dbHelper;
     SQLiteDatabase db;
     int currentPos;
+    String sort;
 
-    public RetainObject(SQLiteDatabase db, FeedReaderDBHelper dbHelper, ReadDBAsync readDBAsync, WriteDBAsync writeDBAsync, int currentPos) {
+    public RetainObject(SQLiteDatabase db, FeedReaderDBHelper dbHelper, ReadDBAsync readDBAsync, WriteDBAsync writeDBAsync, int currentPos, String sort) {
         this.db = db;
         this.dbHelper = dbHelper;
         this.readDBAsync = readDBAsync;
         this.writeDBAsync = writeDBAsync;
         this.currentPos = currentPos;
+        this.sort = sort;
     }
 
     public SQLiteDatabase getDb() {
@@ -58,5 +60,13 @@ public class RetainObject {
 
     public void setCurrentPos(int currentPos) {
         this.currentPos = currentPos;
+    }
+
+    public String getSort() {
+        return sort;
+    }
+
+    public void setSort(String sort) {
+        this.sort = sort;
     }
 }
