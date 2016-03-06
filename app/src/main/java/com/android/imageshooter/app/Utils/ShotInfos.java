@@ -16,23 +16,12 @@ public class ShotInfos {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getTitle() {
         return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public String getURL() {
         return URL;
     }
 
-    public void setURL(String URL) {
-        this.URL = URL;
-    }
 }

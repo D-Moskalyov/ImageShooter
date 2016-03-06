@@ -88,8 +88,8 @@
     <orderEntry type="library" exported="" name="google-oauth-client-java6-1.15.0-rc" level="project" />
     <orderEntry type="library" exported="" name="google-oauth-client-1.15.0-rc" level="project" />
     <orderEntry type="library" exported="" name="okio-1.6.0" level="project" />
-    <orderEntry type="library" exported="" name="gson-2.4" level="project" />
     <orderEntry type="library" exported="" name="jackson-core-asl-1.9.11" level="project" />
+    <orderEntry type="library" exported="" name="gson-2.4" level="project" />
     <orderEntry type="library" exported="" name="retrofit-2.0.0-beta3" level="project" />
     <orderEntry type="library" exported="" name="universal-image-loader-1.9.5" level="project" />
     <orderEntry type="library" exported="" name="google-http-client-android-1.15.0-rc" level="project" />
@@ -99,11 +99,10 @@
     <orderEntry type="library" exported="" name="support-v4-23.1.0" level="project" />
     <orderEntry type="library" exported="" name="google-api-client-1.15.0-rc" level="project" />
     <orderEntry type="library" exported="" name="appcompat-v7-23.1.0" level="project" />
+    <orderEntry type="library" exported="" name="google-http-client-1.15.0-rc" level="project" />
     <orderEntry type="library" exported="" name="converter-gson-2.0.0-beta3" level="project" />
     <orderEntry type="library" exported="" name="okhttp-3.0.0-RC1" level="project" />
-    <orderEntry type="library" exported="" name="google-http-client-1.15.0-rc" level="project" />
     <orderEntry type="library" exported="" name="support-annotations-23.1.0" level="project" />
-    <orderEntry type="module" module-name="oAuth" exported="" />
     <orderEntry type="module" module-name="sdk-library" exported="" />
   </component>
 </module>

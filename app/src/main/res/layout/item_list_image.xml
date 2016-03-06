@@ -17,12 +17,12 @@
     <TextView   android:id="@+id/textTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="20dp"
+                android:textSize="22dp"
                 android:layout_alignParentTop="true"
                 android:layout_centerHorizontal="true"
                 android:padding="6dip"
                 android:visibility="visible"
-                android:background="@color/material_grey_600"
+                android:background="#8FFF"
                 android:textColor="@color/bright_foreground_disabled_material_light"/>
 
 
@@ -30,12 +30,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxHeight="80dp"
-                android:textSize="18dp"
+                android:textSize="20dp"
                 android:layout_alignParentBottom="true"
                 android:layout_centerHorizontal="true"
                 android:padding="6dip"
                 android:visibility="visible"
-                android:background="@color/material_grey_600"
+                android:background="#8FFF"
                 android:textColor="@color/bright_foreground_disabled_material_light"/>
 
 </RelativeLayout>

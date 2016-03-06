@@ -26,47 +26,24 @@ public class RetainObject {
         return db;
     }
 
-    public void setDb(SQLiteDatabase db) {
-        this.db = db;
-    }
-
     public FeedReaderDBHelper getDbHelper() {
         return dbHelper;
-    }
-
-    public void setDbHelper(FeedReaderDBHelper dbHelper) {
-        this.dbHelper = dbHelper;
     }
 
     public ReadDBAsync getReadDBAsync() {
         return readDBAsync;
     }
 
-    public void setReadDBAsync(ReadDBAsync readDBAsync) {
-        this.readDBAsync = readDBAsync;
-    }
-
     public WriteDBAsync getWriteDBAsync() {
         return writeDBAsync;
-    }
-
-    public void setWriteDBAsync(WriteDBAsync writeDBAsync) {
-        this.writeDBAsync = writeDBAsync;
     }
 
     public int getCurrentPos() {
         return currentPos;
     }
 
-    public void setCurrentPos(int currentPos) {
-        this.currentPos = currentPos;
-    }
-
     public String getSort() {
         return sort;
     }
 
-    public void setSort(String sort) {
-        this.sort = sort;
-    }
 }
